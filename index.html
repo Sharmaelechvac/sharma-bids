@@ -382,18 +382,42 @@ async function openFilter() {
    shown with the same cards, search and segmented filter as the Bids list.
    Opening one goes to the standard bid detail; "Start drafting" there
    moves it into the Bids pipeline. No separate boards styling exists. */
-let boardsState = { board: "all", q: "", shown: PAGE };
+let boardsState = { board: "all", q: "", sort: "", shown: PAGE };
 let boardsPage = null, boardsSeq = 0, boardsData = [];
+/* Sort orders for the Boards list, chosen in the page head (the same
+   labelled-select row the filter sheet uses). Boards records carry their
+   own dueDate (not followUpDate) and a bidDate that is the day the bid
+   came in; "Received" falls back to createdAt. Dateless records always
+   fall to the end, whichever way the sort runs. */
+const BOARD_SORT_LABELS = { "date-desc": "received newest", "date-asc": "received oldest", "due-asc": "due soonest", "due-desc": "due latest", "builder-az": "builder A–Z" };
+const boardRecv = (b) => b.bidDate || (b.createdAt ? String(b.createdAt).slice(0, 10) : "");
+const BOARD_SORTERS = {
+  "date-desc": (a, b) => (boardRecv(b) || "").localeCompare(boardRecv(a) || "") || (b.createdAt || "").localeCompare(a.createdAt || ""),
+  "date-asc": (a, b) => (boardRecv(a) || "9999").localeCompare(boardRecv(b) || "9999") || (a.createdAt || "").localeCompare(b.createdAt || ""),
+  "due-asc": (a, b) => (a.dueDate || "9999").localeCompare(b.dueDate || "9999"),
+  "due-desc": (a, b) => (b.dueDate || "").localeCompare(a.dueDate || ""),
+  "builder-az": (a, b) => String(a.builder || "").localeCompare(String(b.builder || "")),
+};
 function renderBoards(P) {
   boardsPage = P;
   header(P, { title: "Bid Tracker", action: addBtn });
   P.html('<div class="sk-pagehead"><div><h1 class="sk-title">Boards</h1><p class="sk-note" id="boards-sub">&nbsp;</p></div></div>'
     + '<div class="sk-search-row"><label class="sk-search">' + ic("search") + '<input type="search" id="bq" placeholder="Builder, address, note" value="' + esc(boardsState.q) + '" aria-label="Search boards bids"><button type="button" class="sk-search__clear" aria-label="Clear search">' + ic("close", "sk-icon--sm") + '</button></label></div>'
     + '<div class="sk-seg" role="tablist" id="bseg"></div>'
+    + '<div class="sk-list"><label class="sk-field sk-field--row"><span class="sk-field__label">Sort</span><select class="sk-field__input" id="bsort" aria-label="Sort boards bids">'
+    + '<option value="">Default</option>'
+    + '<option value="date-desc">Received newest</option>'
+    + '<option value="date-asc">Received oldest</option>'
+    + '<option value="due-asc">Due soonest</option>'
+    + '<option value="due-desc">Due latest</option>'
+    + '<option value="builder-az">Builder A–Z</option>'
+    + '</select></label></div>'
     + '<div id="boards-list">' + skel(5).replace('<div class="sk-space"></div>', '') + '</div>'
     + '<p class="sk-footer">' + FOOTER + '</p>');
   if (boardsState.q) $("bq").parentNode.classList.add("has-value");
   $("bq").addEventListener("input", () => { clearTimeout(window._bqt); window._bqt = setTimeout(() => { boardsState.q = $("bq").value.trim(); boardsState.shown = PAGE; loadBoards(); }, 200); });
+  $("bsort").value = boardsState.sort;
+  $("bsort").addEventListener("change", () => { boardsState.sort = $("bsort").value; boardsState.shown = PAGE; paintBoards({ bids: boardsData }); });
   P.reload = () => loadBoards(); P.refreshable(P.reload);
   return loadBoards();
 }
@@ -414,7 +438,8 @@ function paintBoards(data) {
   $("bseg").innerHTML = segs.map(([k, l]) => '<button type="button" role="tab" aria-selected="' + (boardsState.board === k) + '" data-board="' + k + '">' + l + '</button>').join("");
   $("bseg").querySelectorAll("button").forEach(btn => btn.onclick = () => { boardsState.board = btn.dataset.board; boardsState.shown = PAGE; paintBoards({ bids: boardsData }); });
   const list = boardsData.filter(b => boardsState.board === "all" ? true : b.board === boardsState.board);
-  $("boards-sub").textContent = plural(list.length, "bid") + " from Bid Boards" + (boardsState.q ? " · filtered" : "");
+  if (boardsState.sort && BOARD_SORTERS[boardsState.sort]) list.sort(BOARD_SORTERS[boardsState.sort]);
+  $("boards-sub").textContent = plural(list.length, "bid") + " from Bid Boards" + (boardsState.q ? " · filtered" : "") + (boardsState.sort ? " · " + BOARD_SORT_LABELS[boardsState.sort] : "");
   if (!list.length) {
     const searching = !!boardsState.q;
     $("boards-list").innerHTML = '<div class="sk-empty"><div class="sk-empty__icon">' + ic(searching ? "search" : "doc") + '</div><p class="sk-empty__title">' + (searching ? "No bids match" : "No boards bids here yet") + '</p><p class="sk-empty__text">' + (searching ? "Try a different word." : "New invitations to bid land here, split into Commercial and Residential.") + '</p></div>';
