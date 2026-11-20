@@ -1,0 +1,121 @@
+{
+ "_about": "Builder logos for the Bid Tracker. Every file comes from the company's own website (see the kit-rollout logos manifest, ~/workspace/sharma-kit-rollout/logos/manifest.json). Builders not listed show a navy initials badge.",
+ "logos": {
+  "Fulcrum": {
+   "file": "fulcrum.svg",
+   "source": "https://fulcrumgroup.com/wp-content/uploads/2025/01/Logo_Fullcrum_ConstructionGroup.svg (Fulcrum Construction Group, Apopka FL — the Florida firm)"
+  },
+  "Donald R. Borg Construction": {
+   "file": "donald-r-borg-construction.png",
+   "source": "Builder's own website logo asset (white variant)"
+  },
+  "Spartan Contracting": {
+   "file": "spartan-contracting.jpg",
+   "source": "https://spartancc.com (builder's own website logo asset, Wix media)"
+  },
+  "Summit GC / Summit General Contractors": {
+   "file": "summit-gc.svg",
+   "source": "https://summitgc.net/wp-content/themes/summit/images/summit-general-contractors.svg (builder's own website; full lockup, white-text variant, verified by render)"
+  },
+  "Horizon Retail Construction": {
+   "file": "horizon-retail-construction.png",
+   "source": "https://horizonretail.com (builder's own website logo asset)"
+  },
+  "Landry/French Construction": {
+   "file": "landry-french-construction.png",
+   "source": "https://landryfrenchconstruction.com (builder's own website logo asset; bid email domain landryfrench.com redirects here)"
+  },
+  "Park Eleazer": {
+   "file": "park-eleazer.png",
+   "source": "Builder's own website logo asset (white variant)"
+  },
+  "Marco Contractors": {
+   "file": "marco-contractors.png",
+   "source": "Builder's own website logo asset"
+  },
+  "NOK Construction": {
+   "file": "nok-construction.png",
+   "source": "Workspace files Sharma already had (tracker header logo)"
+  },
+  "Rocklyn Homes": {
+   "file": "rocklyn-homes.png",
+   "source": "Builder's own website (2024 logo file)"
+  },
+  "EXJ Root": {
+   "file": "exj-root.png",
+   "source": "Workspace files Sharma already had (tracker header logo)"
+  },
+  "Coaston Homes": {
+   "file": "coaston-homes.png",
+   "source": "Builder's own website (Squarespace CDN logo asset)"
+  },
+  "DSA Empire": {
+   "file": "dsa-empire.jpg",
+   "source": "Builder's own website logo asset (small, 145x88 — best available from their site)"
+  },
+  "Z Brothers Construction": {
+   "file": "z-brothers-construction.png",
+   "source": "Workspace files Sharma already had (sharmatrack-crew repo: zbrothers-logo-color.png) — registered 2026-11-19 after the tracker sweep found the real logo already live in the crew app; the website crawl had found no exposed asset."
+  },
+  "Logan Construction Group": {
+   "file": "logan-construction-group.png",
+   "source": "Workspace files Sharma already had (tracker header logo)"
+  },
+  "Coastal Construction (CCI Florida)": {
+   "file": "coastal-construction-cci.png",
+   "source": "https://cci-florida.com (builder's own website logo asset)"
+  },
+  "Liberty Development": {
+   "file": "liberty-development.png",
+   "source": "https://libertyd.com (builder's own website logo asset; faint but real)"
+  },
+  "Karma Construction Company": {
+   "file": "karma-construction.png",
+   "source": "https://www.karmaconstructiongroup.com/assets/kcg-logo.png (Karma Construction Group's own website)"
+  },
+  "A.L. Milton": {
+   "file": "a-l-milton.jpg",
+   "source": "Builder's own website header banner (wide banner incl. address text)"
+  },
+  "Fickett Builders": {
+   "file": "fickett-builders.png",
+   "source": "Builder's own website header asset (GoDaddy wsimg)"
+  },
+  "Sagewood Corporation": {
+   "file": "sagewood-corporation.png",
+   "source": "https://sagewoodcorporation.com/wp-content/uploads/2025/12/logo234.png (builder's own website; white 25-years lockup variant)"
+  },
+  "GSB Construction": {
+   "file": "gsb-construction.png",
+   "source": "Builder's own website logo asset"
+  },
+  "Groninger Custom Homes": {
+   "file": "groninger-custom-homes.png",
+   "source": "https://www.groningerhomes.com (builder's own website logo asset, Wix CDN)"
+  },
+  "Infinity Homes Developments": {
+   "file": "infinity-homes-developments.png",
+   "source": "https://infinityhomesgroup.com (builder's own website logo asset)"
+  },
+  "Construction Vix": {
+   "file": "construction-vix.png",
+   "source": "https://constructionvix.com (builder's own website, white variant)"
+  },
+  "Tampa Shell Contractors": {
+   "file": "tampa-shell-contractors.png",
+   "source": "Builder's own website og:image (Tampa-Shell-Contractor-Blue-Logo.png)"
+  },
+  "MRCELA Custom Homes": {
+   "file": "mrcela-custom-homes.png",
+   "source": "Workspace files Sharma already had (tracker header logo, white variant)"
+  },
+  "DNJ Builders": {
+   "file": "dnj-builders.svg",
+   "source": "Builder's own website logo asset (SVG, verified by render)"
+  },
+  "Guida Group": {
+   "file": "guida-group.png",
+   "source": "https://guidagroup.com first header image — a grey 'G' mark only; provisional, best retrievable from their site"
+  }
+ }
+}

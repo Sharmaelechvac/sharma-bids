@@ -1,0 +1,628 @@
+<!doctype html>
+<html lang="en" class="sk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#264387">
+<meta name="color-scheme" content="light">
+<script>(function(){try{if(localStorage.getItem("sk-scheme")==="dark"){var d=document.documentElement;d.setAttribute("data-scheme","dark");var m=document.querySelector('meta[name="theme-color"]');if(m)m.content=d.getAttribute("data-theme")==="track"?"#1C1C1E":"#1a2f61"}}catch(e){}})()</script>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Bids">
+<meta name="robots" content="noindex">
+<meta name="format-detection" content="telephone=no">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="kit/assets/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="kit/assets/favicon-32.png">
+<link rel="stylesheet" href="kit/sharma-kit.css">
+<script src="kit/sharma-kit.js" defer></script>
+
+<title>Bid Tracker · Sharma Electric &amp; HVAC</title>
+<style>
+/* Bid Tracker only: everything else comes from the Sharma kit */
+.bt-hero{padding:18px 0 4px}
+.bt-hero__by{display:flex;align-items:center;gap:12px;margin:0 0 12px}
+.bt-hero__builder{font-size:15px;color:var(--sk-text-2);font-weight:500;margin:0}
+.bt-hero__project{font-size:28px;font-weight:700;letter-spacing:-.022em;line-height:1.15;margin:0}
+.bt-hero__place{font-size:17px;color:var(--sk-text-2);margin:6px 0 0;line-height:1.35}
+.bt-hero__row{display:flex;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap}
+.bt-amount{font-size:34px;font-weight:700;letter-spacing:-.025em;font-variant-numeric:tabular-nums;margin:14px 0 0;line-height:1.1}
+.bt-amount small{display:block;font-size:15px;font-weight:500;color:var(--sk-text-2);letter-spacing:-.01em;margin-top:4px}
+.bt-pipe .sk-row__value,.bt-count,.bt-amount,.sk-tile__sub{font-variant-numeric:tabular-nums}
+.bt-count{display:inline-grid;place-items:center;min-width:28px;height:24px;padding:0 8px;border-radius:12px;background:var(--sk-fill-2);font-size:13px;font-weight:600;color:var(--sk-text-2);font-variant-numeric:tabular-nums}
+.bt-more{margin:14px 0 0}
+.bt-sub{margin:4px 0 0}
+#imp-result{margin:12px 4px 0}
+
+/* GitHub port: the app chrome stays hidden until the envelope unlocks. */
+html.bt-locked .sk-header, html.bt-locked .sk-stackview, html.bt-locked .sk-tabbar, html.bt-locked .sk-sheet, html.bt-locked .sk-offline{display:none}
+html:not(.bt-locked) #bt-lock{display:none}
+</style>
+</head>
+<body class="sk">
+
+<form class="sk-lock" id="bt-lock" autocomplete="off">
+  <img class="sk-lock__logo" src="kit/assets/logo-white-lock.png" alt="Sharma Electric &amp; HVAC">
+  <h1 class="sk-lock__app">Bid Tracker</h1>
+  <p class="sk-lock__hint">Enter your passcode</p>
+  <div class="sk-lock__field">
+    <input type="password" id="lock-code" aria-label="Passcode" placeholder="Passcode" required autofocus autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="go">
+    <p class="sk-lock__err" id="lock-err" role="alert" style="margin:0"></p>
+    <button class="sk-btn" type="submit">Unlock</button>
+  </div>
+  <p class="sk-lock__hint" style="margin-top:18px;font-size:15px">Stays unlocked until you lock it or close this tab.</p>
+  <p class="sk-lock__foot">Sharma Electric &amp; HVAC<br>Lic. EC13013924 · CAC1823596</p>
+</form>
+<script>/* locked: wipe any bid data saved on this phone */ try { caches.delete("sk-data-v1"); } catch (e) {}</script>
+
+<header class="sk-header">
+  <div class="sk-header__bar">
+    <div class="sk-header__lead" id="hd-lead"></div>
+    <div class="sk-header__title" id="hd-title">Bid Tracker</div>
+    <div class="sk-header__trail" id="hd-trail"></div>
+  </div>
+</header>
+<div class="sk-offline" aria-live="polite"></div>
+<main class="sk-stackview" id="app"></main>
+
+<nav class="sk-tabbar" aria-label="Sections">
+  <div class="sk-tabbar__inner">
+    <a class="sk-tab" href="#/" data-tab="today" data-match="^#/?$"><svg class="sk-icon" aria-hidden="true"><use href="#i-home"/></svg>Today</a>
+    <a class="sk-tab" href="#/bids" data-tab="bids" data-match="^#/bids"><svg class="sk-icon" aria-hidden="true"><use href="#i-doc"/></svg>Bids</a>
+    <a class="sk-tab" href="#/boards" data-tab="boards" data-match="^#/boards"><svg class="sk-icon" aria-hidden="true"><use href="#i-clipboard"/></svg>Boards</a>
+    <a class="sk-tab" href="#/builders" data-tab="builders" data-match="^#/builders"><svg class="sk-icon" aria-hidden="true"><use href="#i-building"/></svg>Builders</a>
+    <a class="sk-tab" href="#/more" data-tab="more" data-match="^#/(more|import)"><svg class="sk-icon" aria-hidden="true"><use href="#i-more"/></svg>More</a>
+  </div>
+</nav>
+
+<!-- Add / edit bid sheet -->
+<section class="sk-sheet sk-sheet--full" id="bid-sheet" aria-labelledby="bid-sheet-title">
+  <div class="sk-sheet__grab"></div>
+  <div class="sk-sheet__head">
+    <button class="sk-btn sk-btn--text" type="button" data-sheet-close>Cancel</button>
+    <div class="sk-sheet__title" id="bid-sheet-title">New bid</div>
+    <span></span>
+  </div>
+  <form id="form" novalidate style="display:contents">
+    <div class="sk-sheet__body" id="form-body"></div>
+    <div class="sk-sheet__foot"><button class="sk-btn" type="submit" id="form-save">Save bid</button></div>
+  </form>
+</section>
+
+<!-- Add note sheet -->
+<section class="sk-sheet" id="note-sheet" aria-labelledby="note-sheet-title">
+  <div class="sk-sheet__grab"></div>
+  <div class="sk-sheet__head">
+    <button class="sk-btn sk-btn--text" type="button" data-sheet-close>Cancel</button>
+    <div class="sk-sheet__title" id="note-sheet-title">Add note</div>
+    <span></span>
+  </div>
+  <form id="note-form" style="display:contents">
+    <div class="sk-sheet__body">
+      <div class="sk-list"><label class="sk-field"><span class="sk-field__label">Note</span>
+        <textarea class="sk-field__input" id="note-text" rows="5" placeholder="Who you talked to, what they said"></textarea></label></div>
+      <p class="sk-field-hint">Saved with today's date and time.</p>
+    </div>
+    <div class="sk-sheet__foot"><button class="sk-btn" type="submit">Save note</button></div>
+  </form>
+</section>
+
+<!-- Filter sheet -->
+<section class="sk-sheet" id="filter-sheet" aria-labelledby="filter-sheet-title">
+  <div class="sk-sheet__grab"></div>
+  <div class="sk-sheet__head">
+    <button class="sk-btn sk-btn--text" type="button" id="f-clear">Clear</button>
+    <div class="sk-sheet__title" id="filter-sheet-title">Filter bids</div>
+    <span></span>
+  </div>
+  <div class="sk-sheet__body">
+    <div class="sk-list">
+      <label class="sk-field sk-field--row"><span class="sk-field__label">Status</span><select class="sk-field__input" id="f-status"></select></label>
+      <label class="sk-field sk-field--row"><span class="sk-field__label">Trade</span><select class="sk-field__input" id="f-trade"></select></label>
+      <label class="sk-field sk-field--row"><span class="sk-field__label">Builder</span><select class="sk-field__input" id="f-builder"></select></label>
+      <label class="sk-field sk-field--row"><span class="sk-field__label">Sort</span><select class="sk-field__input" id="f-sort">
+        <option value="">Default order</option>
+        <option value="date-desc">Sent · newest first</option>
+        <option value="date-asc">Sent · oldest first</option>
+        <option value="due-asc">Follow-up · soonest first</option>
+        <option value="due-desc">Follow-up · latest first</option>
+      </select></label>
+      <label class="sk-field sk-field--row sk-date" for="f-from"><span class="sk-field__label">Sent after</span><span class="sk-date__text"></span><input class="sk-date__input" type="date" id="f-from" data-empty="Any"></label>
+      <label class="sk-field sk-field--row sk-date" for="f-to"><span class="sk-field__label">Sent before</span><span class="sk-date__text"></span><input class="sk-date__input" type="date" id="f-to" data-empty="Any"></label>
+    </div>
+    <div class="sk-actions"><a class="sk-btn sk-btn--secondary" id="f-export" href="#" data-export="1"><svg class="sk-icon" aria-hidden="true"><use href="#i-download"/></svg>Export these bids</a></div>
+  </div>
+  <div class="sk-sheet__foot"><button class="sk-btn" type="button" id="f-apply">Show bids</button></div>
+</section>
+
+<script src="assets/pure.js"></script>
+<script src="assets/data.js"></script>
+<script src="assets/refresh.js"></script>
+<script>
+const STATUSES = ["New","Drafting","Sent","Follow-up","Won","Lost","No response"];
+const TRADES = ["Electrical","HVAC","Both","Low voltage"];
+const FOOTER = "Sharma Electric &amp; HVAC<br>Lic. EC13013924 · CAC1823596";
+const PAGE = 25;
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+const ic = (n, c) => '<svg class="sk-icon' + (c ? " " + c : "") + '" aria-hidden="true"><use href="#i-' + n + '"/></svg>';
+const money = (n) => n == null || n === "" ? "" : new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",maximumFractionDigits:0}).format(Number(n));
+const moneyShort = (n) => { n = Number(n)||0; if (n >= 1e6) return "$" + (n/1e6).toFixed(n >= 1e7 ? 0 : 1).replace(/\.0$/,"") + "M"; if (n >= 1e4) return "$" + Math.round(n/1e3) + "k"; return money(n); };
+const pct = (n) => n == null ? "–" : Math.round(n * 100) + "%";
+const todayET = () => new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
+const fmtDate = (d, withYear) => { if (!d) return ""; const [y,m,dd] = d.split("-").map(Number); const dt = new Date(Date.UTC(y, m-1, dd)); const sameYear = y === Number(todayET().slice(0,4)); return dt.toLocaleDateString("en-US", { timeZone:"UTC", month:"short", day:"numeric", year: (withYear || !sameYear) ? "numeric" : undefined }); };
+const plural = (n, w) => n + " " + w + (n === 1 ? "" : "s");
+const title = (b) => b.planName ? b.project + " · " + b.planName : (b.project || "Untitled");
+/* "TIFA Chocolate TI, 11567 Regency Village Dr, Orlando" -> name "TIFA Chocolate TI", place "11567 Regency Village Dr, Orlando" */
+function splitProject(b) {
+  const p = String(b.project || "Untitled"); const i = p.indexOf(",");
+  const name = i > 0 ? p.slice(0, i).trim() : p; const place = i > 0 ? p.slice(i + 1).trim() : "";
+  const plan = String(b.planName || "").trim();
+  return { name: plan && !name.toLowerCase().includes(plan.toLowerCase()) ? name + " · " + plan : name, place };
+}
+
+/* Work state in the kit's fixed words. The bid's own stage (Sent, Won, Lost...) is unchanged and shown as text. */
+function workState(b, today) {
+  today = today || todayET();
+  if (b.status === "Won") return "Done";
+  if (b.status === "Lost") return "";
+  if (b.followUpDate && b.followUpDate <= today) return "Needs you";
+  return "In progress";
+}
+const pillFor = (b, t) => { const w = workState(b, t); return w ? SK.pill(w) : '<span class="sk-tag">Lost</span>'; };
+
+/* Builder logos: files in /logos/ come only from each company's own website (see /logos/sources.json).
+   Anyone not listed gets the kit's navy initials badge. Never draw or invent a logo. */
+const BUILDER_LOGOS = {"fulcrum":"fulcrum.svg","donald r. borg construction":"donald-r-borg-construction.png","spartan contracting":"spartan-contracting.jpg","summit gc":"summit-gc.svg","horizon retail construction":"horizon-retail-construction.png","landry/french construction":"landry-french-construction.png","park eleazer":"park-eleazer.png","marco contractors":"marco-contractors.png","nok construction":"nok-construction.png","rocklyn homes":"rocklyn-homes.png","exj root":"exj-root.png","coaston homes":"coaston-homes.png","dsa empire":"dsa-empire.jpg","z brothers construction":"z-brothers-construction.png","logan construction group":"logan-construction-group.png","coastal construction (cci florida)":"coastal-construction-cci.png","liberty development":"liberty-development.png","karma construction company":"karma-construction.png","a.l. milton":"a-l-milton.jpg","fickett builders":"fickett-builders.png","sagewood corporation":"sagewood-corporation.png","gsb construction":"gsb-construction.png","groninger custom homes":"groninger-custom-homes.png","infinity homes developments":"infinity-homes-developments.png","construction vix":"construction-vix.png","tampa shell contractors":"tampa-shell-contractors.png","mrcela custom homes":"mrcela-custom-homes.png","dnj builders":"dnj-builders.svg","guida group":"guida-group.png"};
+const blogo = (name, size) => SK.logo(name, BUILDER_LOGOS[String(name || "").trim().toLowerCase()] ? "logos/" + BUILDER_LOGOS[String(name || "").trim().toLowerCase()] : "", size ? { size } : null);
+const sqft = (n) => n == null || n === "" ? "" : Number(n).toLocaleString("en-US") + " sq ft";
+const sfLine = (b) => b.livingSf ? '<span class="sk-num">' + sqft(b.livingSf) + '</span>' : (b.underRoofSf ? '<span class="sk-num">' + sqft(b.underRoofSf) + ' under roof</span>' : '');
+let builders = [];
+let state = { seg: "open", q: "", status: "", trade: "", builder: "", sort: "", from: "", to: "", shown: PAGE };
+
+async function api(path, opts = {}) {
+  return BidsLocal.api(path, opts);
+}
+const toast = (m, o) => SK.toast(m, o);
+
+/* Screens live on the kit's stack (SK.stack): tabs cross-fade and keep their scroll,
+   bids slide in from the right, edge swipe or the back button slides them out. */
+const KIT = (document.querySelector('link[rel=stylesheet][href*="sharma-kit"]').href || "").replace(/sharma-kit\.css.*$/, "");
+const LOGO = '<a class="sk-header__logo" href="#/" aria-label="Today"><img src="' + KIT + 'assets/logo-white-header.png" alt="Sharma Electric &amp; HVAC" width="103" height="20"></a>';
+const TAB_NAMES = { today: "Today", bids: "Bids", boards: "Boards", builders: "Builders", more: "More" };
+let nav = null;
+function header(P, { back, title: t, action }) {
+  P.setHeader({
+    lead: back ? '<a class="sk-header__btn sk-header__back" href="' + back.href + '" data-back>' + ic("chevron-left") + esc(back.label) + '</a>' : null,
+    title: t == null ? "Bid Tracker" : t, trail: action || "", backHref: back && back.href,
+  });
+}
+const addBtn = '<button class="sk-header__btn" type="button" onclick="openNew()" aria-label="New bid">' + ic("plus") + '</button>';
+/* back link for a pushed screen = whatever screen sits under it */
+function backTo() { const u = nav.top(); return u ? { href: u.hash || "#/", label: TAB_NAMES[u.key] || "Back" } : { href: "#/bids", label: "Bids" }; }
+const skel = (n) => '<div class="sk-space"></div><div class="sk-stack">' + Array.from({length: n || 4}, () => '<div class="sk-skel"></div>').join("") + '</div>';
+const errorView = (err) => '<div class="sk-empty"><div class="sk-empty__icon">' + ic("alert") + '</div><p class="sk-empty__title">Could not load</p><p class="sk-empty__text">' + esc(err.message) + '</p><button class="sk-btn sk-btn--secondary" onclick="nav.top().reload()">Try again</button></div>';
+
+/* returns HTML. Late follow-ups read "35 days late" in red (kit .sk-late); red is used for nothing else. */
+function stageLine(b, today) {
+  const w = workState(b, today);
+  if (w === "Needs you") return b.followUpDate < today ? SK.lateHtml(b.followUpDate, today) : "Due today";
+  if (b.status === "Won") return "Won" + (b.wonDate ? " " + fmtDate(b.wonDate) : "");
+  if (b.status === "Lost") return "Lost" + (b.lostReason ? ": " + esc(b.lostReason) : "");
+  return esc(b.status) + (b.bidDate ? " " + fmtDate(b.bidDate) : "");
+}
+function bidCard(b, today) {
+  const pj = splitProject(b);
+  const bits = [];
+  if (b.amount != null) bits.push("<b>" + money(b.amount) + "</b>");
+  bits.push(stageLine(b, today));
+  return '<a class="sk-card sk-card--logo" href="#/bids/' + encodeURIComponent(b.id) + '">' + blogo(b.builder)
+    + '<div class="sk-card__title">' + esc(pj.name) + '</div>' + pillFor(b, today)
+    + '<div class="sk-card__detail">' + esc(b.builder) + ' · ' + esc(b.trade) + (b.houses > 1 ? ' · ' + plural(b.houses, "house") : '') + (sfLine(b) ? ' · ' + sfLine(b) : '') + (b.alternateGroup ? ' · Alternate' : '') + '</div>'
+    + '<div class="sk-card__meta">' + bits.join(' <span aria-hidden="true">·</span> ') + '</div>'
+    + ic("chevron-right", "sk-card__chev") + '</a>';
+}
+
+function parseHash() {
+  const h = (location.hash || "#/").replace(/^#/, ""); const [path, qs] = h.split("?");
+  return { parts: path.split("/").filter(Boolean), qs: qs || "" };
+}
+const ROOTS = { today: renderHome, bids: renderList, boards: renderBoards, builders: renderBuilders, more: renderMore };
+function showRoot(tab, qs) {
+  const i = nav.find(tab);
+  if (i === 0 && nav.depth() > 1) nav.popTo(0);
+  else if (!(nav.top() && nav.top().key === tab)) nav.root(tab, (P) => { P.qs = qs; P.hash = location.hash || "#/"; ROOTS[tab](P, qs); });
+  const P = nav.top();
+  P.hash = location.hash || "#/";
+  if (P.qs !== qs) { P.qs = qs; P.el.scrollTop = 0; ROOTS[tab](P, qs); }
+  return P;
+}
+function showPush(key, parentTab, build) {
+  const i = nav.find(key);
+  if (i >= 0) { if (i < nav.depth() - 1) nav.popTo(i); return; }
+  const first = !nav.top();
+  if (first) showRoot(parentTab, "");
+  const back = backTo();
+  nav.push(key, (P) => { P.hash = location.hash; build(P, back); }, { instant: first, initial: first });
+}
+function route() {
+  if (document.querySelector(".sk-sheet.is-open")) SK.closeSheet();
+  const { parts, qs } = parseHash();
+  if (parts[0] === "bids" && parts[1] === "new") { if (!nav.top()) showRoot("bids", ""); return openNew(); }
+  if (parts[0] === "bids" && parts[1]) { const id = decodeURIComponent(parts[1]); return showPush("bid:" + id, "bids", (P, back) => renderDetail(P, id, back)); }
+  if (parts[0] === "import") return showPush("import", "more", (P, back) => renderImport(P, back));
+  const tab = { bids: "bids", boards: "boards", builders: "builders", more: "more" }[parts[0]] || "today";
+  showRoot(tab, tab === "bids" ? qs : "");
+}
+/* after a save, quietly refresh the tab screens that are kept in memory */
+function refreshRoots() { Object.values(nav.roots).forEach((P) => P.reload && P.reload()); }
+const loadErr = (P) => (e) => { if (P._painted) toast(e.message, { icon: "alert" }); else P.html(errorView(e)); };
+
+/* ---------- Today ---------- */
+function renderHome(P) {
+  header(P, { title: "Bid Tracker", action: addBtn });
+  P.html('<div class="sk-pagehead"><div><h1 class="sk-title">Today</h1><p class="sk-note">&nbsp;</p></div></div>' + skel(3));
+  P.reload = () => BidsLocal.data("/api/stats", (s) => paintHome(P, s)).catch(loadErr(P));
+  P.refreshable(P.reload);
+  return P.reload();
+}
+function paintHome(P, s) {
+  P._painted = true;
+  const due = s.followUp.overdue.concat(s.followUp.today).sort((a, b) => (a.followUpDate || "").localeCompare(b.followUpDate || ""));
+  const dayName = new Date().toLocaleDateString("en-US", { timeZone: "America/New_York", weekday: "long", month: "long", day: "numeric" });
+  const top = due.slice(0, 3);
+  const needs = due.length
+    ? '<div class="sk-section-title"><span>Needs you · ' + plural(due.length, "follow-up") + (s.followUp.overdue.length ? ', <span class="sk-late">' + s.followUp.overdue.length + ' late</span>' : '') + '</span>' + (due.length > 3 ? '<a href="#/bids?seg=due">See all</a>' : '') + '</div>'
+      + '<div class="sk-stack">' + top.map(b => bidCard(b, s.today)).join("") + '</div>'
+    : '<div class="sk-space"></div><div class="sk-list"><div class="sk-empty sk-empty--done"><div class="sk-empty__icon">' + ic("check") + '</div><p class="sk-empty__title">Nothing due today</p><p class="sk-empty__text">Follow-ups show up here on the day they are due.</p></div></div>';
+  const tiles = '<div class="sk-section-title"><span>At a glance</span></div><div class="sk-tiles">'
+    + '<a class="sk-tile" href="#/bids"><div class="sk-tile__label">Open bids</div><div class="sk-tile__value">' + s.open.count + '</div><div class="sk-tile__sub">' + moneyShort(s.open.amount) + ' out</div></a>'
+    + '<a class="sk-tile" href="#/bids?seg=won"><div class="sk-tile__label">Win rate</div><div class="sk-tile__value">' + pct(s.winRate.count) + '</div><div class="sk-tile__sub">' + s.winRate.won + ' won · ' + s.winRate.lost + ' lost</div></a>'
+    + '<a class="sk-tile' + (due.length ? ' sk-tile--need' : '') + '" href="#/bids?seg=due"><div class="sk-tile__label">Follow-ups due</div><div class="sk-tile__value">' + due.length + '</div><div class="sk-tile__sub">' + s.followUp.today.length + ' today · ' + (s.followUp.overdue.length ? '<span class="sk-late">' + s.followUp.overdue.length + ' late</span>' : '0 late') + '</div></a>'
+    + '<a class="sk-tile" href="#/bids?seg=won"><div class="sk-tile__label">Won this month</div><div class="sk-tile__value">' + s.wonThisMonth.count + '</div><div class="sk-tile__sub">' + (s.wonThisMonth.amount ? moneyShort(s.wonThisMonth.amount) : 'None yet') + '</div></a>'
+    + '</div>';
+  const pipe = '<div class="sk-section-title"><span>Pipeline</span></div><div class="sk-list bt-pipe">'
+    + STATUSES.map(st => { const r = s.pipeline[st] || { count: 0, amount: 0 }; return '<a class="sk-row" href="#/bids?status=' + encodeURIComponent(st) + '"><div class="sk-row__body"><div class="sk-row__title">' + esc(st) + '</div></div><span class="sk-row__value">' + (r.amount ? moneyShort(r.amount) : '') + '</span><span class="bt-count">' + r.count + '</span>' + ic("chevron-right", "sk-row__chev") + '</a>'; }).join("")
+    + '</div>' + (s.alternates && s.alternates.excluded ? '<p class="sk-field-hint">Alternate options count once, at the highest amount.</p>' : '');
+  P.html('<div class="sk-pagehead"><div><h1 class="sk-title">Today</h1><p class="sk-note">' + esc(dayName) + '</p></div></div>'
+    + needs + tiles + pipe + '<p class="sk-footer">' + FOOTER + '</p>');
+}
+
+/* ---------- Bids ---------- */
+let allBids = [];
+let listPage = null, listSeq = 0;
+function renderList(P, qs) {
+  const params = new URLSearchParams(qs || ""); listPage = P;
+  state = Object.assign({ seg: "open", q: "", status: "", trade: "", builder: "", sort: "", from: "", to: "", shown: PAGE }, {
+    seg: params.get("seg") || (params.get("status") || params.get("builder") ? "all" : "open"),
+    q: params.get("q") || "", status: params.get("status") || "", trade: params.get("trade") || "",
+    builder: params.get("builder") || "", sort: params.get("sort") || "", from: params.get("from") || "", to: params.get("to") || ""
+  });
+  header(P, { title: "Bid Tracker", action: addBtn });
+  P.html('<div class="sk-pagehead"><div><h1 class="sk-title">Bids</h1><p class="sk-note" id="list-sub">&nbsp;</p></div></div>'
+    + '<div class="sk-search-row"><label class="sk-search">' + ic("search") + '<input type="search" id="q" placeholder="Builder, address, note" value="' + esc(state.q) + '" aria-label="Search bids"><button type="button" class="sk-search__clear" aria-label="Clear search">' + ic("close", "sk-icon--sm") + '</button></label>'
+    + '<button class="sk-iconbtn" type="button" id="filter-btn" aria-label="Filter">' + ic("filter") + '</button></div>'
+    + '<div class="sk-seg" role="tablist" id="seg"></div>'
+    + '<div id="list">' + skel(5).replace('<div class="sk-space"></div>', '') + '</div>'
+    + '<p class="sk-footer">' + FOOTER + '</p>');
+  if (state.q) $("q").parentNode.classList.add("has-value");
+  $("q").addEventListener("input", () => { clearTimeout(window._qt); window._qt = setTimeout(() => { state.q = $("q").value.trim(); state.shown = PAGE; loadList(); }, 200); });
+  $("filter-btn").onclick = openFilter;
+  P.reload = () => loadList(); P.refreshable(P.reload);
+  return loadList();
+}
+
+function segOf(b, today) {
+  if (b.status === "Won") return "won";
+  if (b.status === "Lost") return "lost";
+  /* Boards intake: New bids live on the Boards tab until drafting starts,
+     so they stay out of the Open segment (matching Today's open counts). */
+  if (b.status === "New") return "new";
+  return "open";
+}
+function loadList() {
+  const p = new URLSearchParams();
+  ["q","status","trade","builder","from","to"].forEach(k => { if (state[k]) p.set(k, state[k]); });
+  $("filter-btn").classList.toggle("is-active", !!(state.status || state.trade || state.builder || state.sort || state.from || state.to));
+  const seq = ++listSeq;
+  return BidsLocal.data("/api/bids" + (p.toString() ? "?" + p : ""), (data) => { if (seq === listSeq) paintList(data); })
+    .catch((e) => { if (seq !== listSeq) return; if (listPage && listPage._painted) toast(e.message, { icon: "alert" }); else $("list").innerHTML = errorView(e); });
+}
+function paintList(data) {
+  if (listPage) listPage._painted = true;
+  allBids = data.bids || [];
+  const today = todayET();
+  const counts = { open: 0, due: 0, won: 0, lost: 0, new: 0, all: allBids.length };
+  allBids.forEach(b => { counts[segOf(b)]++; if (workState(b, today) === "Needs you") counts.due++; });
+  const segs = [["open","Open"],["due","Due"],["won","Won"],["lost","Lost"],["all","All"]];
+  $("seg").innerHTML = segs.map(([k, l]) => '<button type="button" role="tab" aria-selected="' + (state.seg === k) + '" data-seg="' + k + '">' + l + '</button>').join("");
+  $("seg").querySelectorAll("button").forEach(btn => btn.onclick = () => { state.seg = btn.dataset.seg; state.shown = PAGE; loadList(); });
+  const list = allBids.filter(b => state.seg === "all" ? true : state.seg === "due" ? workState(b, today) === "Needs you" : segOf(b) === state.seg)
+    .sort(SORTERS[state.sort] || ((a, b) => state.seg === "due" ? (a.followUpDate || "").localeCompare(b.followUpDate || "") : 0));
+  const filtered = !!(state.q || state.status || state.trade || state.builder || state.from || state.to);
+  $("list-sub").textContent = plural(list.length, "bid") + (state.builder ? " · " + state.builder : "") + (state.status ? " · " + state.status : "") + (filtered && !state.builder && !state.status ? " · filtered" : "") + (state.sort ? " · " + SORT_LABELS[state.sort] : "");
+  if (!list.length) {
+    $("list").innerHTML = '<div class="sk-empty"><div class="sk-empty__icon">' + ic(filtered ? "search" : "doc") + '</div><p class="sk-empty__title">' + (filtered ? "No bids match" : "No bids here yet") + '</p><p class="sk-empty__text">' + (filtered ? "Try a different word or clear the filters." : "Tap + to add a bid, or import the ones you already sent.") + '</p>' + (filtered ? '<button class="sk-btn sk-btn--secondary" type="button" onclick="clearFilters()">Clear filters</button>' : '') + '</div>';
+    return;
+  }
+  const shown = list.slice(0, state.shown);
+  $("list").innerHTML = '<div class="sk-stack">' + shown.map(b => bidCard(b, today)).join("") + '</div>'
+    + (list.length > shown.length ? '<div class="bt-more"><button class="sk-btn sk-btn--secondary" type="button" id="more-btn">Show ' + Math.min(PAGE, list.length - shown.length) + ' more</button></div>' : '');
+  if ($("more-btn")) $("more-btn").onclick = () => { state.shown += PAGE; loadList(); };
+}
+function clearFilters() { state = Object.assign(state, { q: "", status: "", trade: "", builder: "", sort: "", from: "", to: "" }); if ($("q")) { $("q").value = ""; $("q").parentNode.classList.remove("has-value"); } loadList(); }
+
+/* Sort orders for the Bids list, chosen in the filter sheet (the app's own
+   control pattern). Empty dates always fall to the end. */
+const SORT_LABELS = { "date-desc": "newest first", "date-asc": "oldest first", "due-asc": "follow-up soonest", "due-desc": "follow-up latest" };
+const SORTERS = {
+  "date-desc": (a, b) => (b.bidDate || "").localeCompare(a.bidDate || "") || (b.createdAt || "").localeCompare(a.createdAt || ""),
+  "date-asc": (a, b) => (a.bidDate || "9999").localeCompare(b.bidDate || "9999") || (a.createdAt || "").localeCompare(b.createdAt || ""),
+  "due-asc": (a, b) => (a.followUpDate || "9999").localeCompare(b.followUpDate || "9999"),
+  "due-desc": (a, b) => (b.followUpDate || "").localeCompare(a.followUpDate || ""),
+};
+
+async function openFilter() {
+  await ensureBuilders();
+  $("f-status").innerHTML = '<option value="">Any</option>' + STATUSES.map(s => '<option' + (state.status === s ? ' selected' : '') + '>' + s + '</option>').join("");
+  $("f-trade").innerHTML = '<option value="">Any</option>' + TRADES.map(s => '<option' + (state.trade === s ? ' selected' : '') + '>' + s + '</option>').join("");
+  $("f-builder").innerHTML = '<option value="">Any</option>' + builders.map(b => '<option' + (state.builder.toLowerCase() === b.name.toLowerCase() ? ' selected' : '') + '>' + esc(b.name) + '</option>').join("");
+  $("f-sort").value = state.sort;
+  $("f-from").value = state.from; $("f-to").value = state.to; SK.syncDates($("filter-sheet"));
+  const syncExport = () => { const p = new URLSearchParams(); [["status","f-status"],["trade","f-trade"],["builder","f-builder"],["from","f-from"],["to","f-to"]].forEach(([k, id]) => { if ($(id).value) p.set(k, $(id).value); }); if (state.q) p.set("q", state.q); $("f-export").dataset.params = p.toString(); };
+  ["f-status","f-trade","f-builder","f-from","f-to"].forEach(id => $(id).onchange = syncExport); syncExport();
+  $("f-apply").onclick = () => { state.status = $("f-status").value; state.trade = $("f-trade").value; state.builder = $("f-builder").value; state.sort = $("f-sort").value; state.from = $("f-from").value; state.to = $("f-to").value; if (state.status) state.seg = "all"; state.shown = PAGE; SK.closeSheet("filter-sheet"); loadList(); };
+  $("f-clear").onclick = () => { ["f-status","f-trade","f-builder","f-sort","f-from","f-to"].forEach(id => $(id).value = ""); SK.syncDates($("filter-sheet")); syncExport(); };
+  SK.openSheet("filter-sheet");
+}
+
+/* ---------- Boards (Bid Boards intake, in the Tracker's own design) ----------
+   Boards bids are the same records as everywhere else (source "boards"),
+   shown with the same cards, search and segmented filter as the Bids list.
+   Opening one goes to the standard bid detail; "Start drafting" there
+   moves it into the Bids pipeline. No separate boards styling exists. */
+let boardsState = { board: "all", q: "", shown: PAGE };
+let boardsPage = null, boardsSeq = 0, boardsData = [];
+function renderBoards(P) {
+  boardsPage = P;
+  header(P, { title: "Bid Tracker", action: addBtn });
+  P.html('<div class="sk-pagehead"><div><h1 class="sk-title">Boards</h1><p class="sk-note" id="boards-sub">&nbsp;</p></div></div>'
+    + '<div class="sk-search-row"><label class="sk-search">' + ic("search") + '<input type="search" id="bq" placeholder="Builder, address, note" value="' + esc(boardsState.q) + '" aria-label="Search boards bids"><button type="button" class="sk-search__clear" aria-label="Clear search">' + ic("close", "sk-icon--sm") + '</button></label></div>'
+    + '<div class="sk-seg" role="tablist" id="bseg"></div>'
+    + '<div id="boards-list">' + skel(5).replace('<div class="sk-space"></div>', '') + '</div>'
+    + '<p class="sk-footer">' + FOOTER + '</p>');
+  if (boardsState.q) $("bq").parentNode.classList.add("has-value");
+  $("bq").addEventListener("input", () => { clearTimeout(window._bqt); window._bqt = setTimeout(() => { boardsState.q = $("bq").value.trim(); boardsState.shown = PAGE; loadBoards(); }, 200); });
+  P.reload = () => loadBoards(); P.refreshable(P.reload);
+  return loadBoards();
+}
+function loadBoards() {
+  const p = new URLSearchParams(); p.set("source", "boards");
+  if (boardsState.q) p.set("q", boardsState.q);
+  const seq = ++boardsSeq;
+  return BidsLocal.data("/api/bids?" + p, (data) => { if (seq === boardsSeq) paintBoards(data); })
+    .catch((e) => { if (seq !== boardsSeq) return; if (boardsPage && boardsPage._painted) toast(e.message, { icon: "alert" }); else $("boards-list").innerHTML = errorView(e); });
+}
+function paintBoards(data) {
+  if (boardsPage) boardsPage._painted = true;
+  boardsData = data.bids || [];
+  const today = todayET();
+  const counts = { all: boardsData.length, commercial: 0, residential: 0 };
+  boardsData.forEach(b => { if (b.board === "commercial" || b.board === "residential") counts[b.board]++; });
+  const segs = [["all","All"],["commercial","Commercial"],["residential","Residential"]];
+  $("bseg").innerHTML = segs.map(([k, l]) => '<button type="button" role="tab" aria-selected="' + (boardsState.board === k) + '" data-board="' + k + '">' + l + '</button>').join("");
+  $("bseg").querySelectorAll("button").forEach(btn => btn.onclick = () => { boardsState.board = btn.dataset.board; boardsState.shown = PAGE; paintBoards({ bids: boardsData }); });
+  const list = boardsData.filter(b => boardsState.board === "all" ? true : b.board === boardsState.board);
+  $("boards-sub").textContent = plural(list.length, "bid") + " from Bid Boards" + (boardsState.q ? " · filtered" : "");
+  if (!list.length) {
+    const searching = !!boardsState.q;
+    $("boards-list").innerHTML = '<div class="sk-empty"><div class="sk-empty__icon">' + ic(searching ? "search" : "doc") + '</div><p class="sk-empty__title">' + (searching ? "No bids match" : "No boards bids here yet") + '</p><p class="sk-empty__text">' + (searching ? "Try a different word." : "New invitations to bid land here, split into Commercial and Residential.") + '</p></div>';
+    return;
+  }
+  const shown = list.slice(0, boardsState.shown);
+  $("boards-list").innerHTML = '<div class="sk-stack">' + shown.map(b => bidCard(b, today)).join("") + '</div>'
+    + (list.length > shown.length ? '<div class="bt-more"><button class="sk-btn sk-btn--secondary" type="button" id="bmore-btn">Show ' + Math.min(PAGE, list.length - shown.length) + ' more</button></div>' : '');
+  if ($("bmore-btn")) $("bmore-btn").onclick = () => { boardsState.shown += PAGE; paintBoards({ bids: boardsData }); };
+}
+
+/* ---------- Bid detail ---------- */
+let current = null;
+let detailPage = null;
+const detailSkel = '<div class="bt-hero"><div class="sk-skel" style="height:16px;width:40%;margin:0 0 10px"></div><div class="sk-skel" style="height:30px;width:80%;margin:0 0 10px"></div><div class="sk-skel" style="height:18px;width:60%"></div><div class="sk-skel" style="height:36px;width:45%;margin-top:18px"></div></div><div class="sk-space"></div><div class="sk-skel" style="height:50px"></div><div class="sk-space"></div><div class="sk-skel" style="height:260px"></div>';
+function renderDetail(P, id, back) {
+  P.back = back; detailPage = P;
+  header(P, { back, title: "" });
+  /* draw what we already know from the list so the slide-in is never empty */
+  const known = allBids.find((b) => b.id === id) || null;
+  if (known && known.notes) paintDetail(P, known); else P.html(detailSkel);
+  P.reload = () => BidsLocal.data("/api/bids/" + encodeURIComponent(id), (d) => paintDetail(P, d.bid)).catch(loadErr(P));
+  P.refreshable(P.reload);
+  return P.reload();
+}
+function paintDetail(P, bid) {
+  P._painted = true; current = bid; detailPage = P;
+  header(P, { back: P.back, title: "", action: '<button class="sk-header__btn" type="button" onclick="openEdit()">Edit</button>' });
+  const today = todayET();
+  const rows = [
+    ["Stage", esc(bid.status)],
+    ["Trade", esc(bid.trade)],
+    ["Sent", bid.bidDate ? fmtDate(bid.bidDate, true) : "Not set"],
+    ["Follow up", bid.followUpDate ? fmtDate(bid.followUpDate, true) : "Not set", (bid.status !== "Won" && bid.status !== "Lost") ? SK.lateHtml(bid.followUpDate, today) : ""],
+    ["Houses", bid.houses == null ? "–" : esc(bid.houses)],
+    ["Living area", bid.livingSf ? sqft(bid.livingSf) : "–"],
+    ["Under roof", bid.underRoofSf ? sqft(bid.underRoofSf) : "–"],
+  ];
+  if (bid.source === "boards") {
+    const extra = [["From", "Bid Boards · " + (bid.board === "residential" ? "Residential" : "Commercial")]];
+    if (bid.boardsStatus) extra.push(["Boards status", esc(bid.boardsStatus)]);
+    if (bid.dueDate) extra.push(["Due", fmtDate(bid.dueDate, true) || esc(bid.dueDate)]);
+    rows.splice(1, 0, ...extra);
+  }
+  if (bid.alternateGroup) rows.push(["Alternate group", esc(bid.alternateGroup)]);
+  if (bid.status === "Won" && bid.wonDate) rows.push(["Won on", fmtDate(bid.wonDate, true)]);
+  if (bid.lostReason) rows.push(["Lost because", esc(bid.lostReason)]);
+  const notes = (bid.notes || []).slice().reverse();
+  const pj = splitProject(bid);
+  P.html('<div class="bt-hero"><div class="bt-hero__by">' + blogo(bid.builder, "lg") + '<p class="bt-hero__builder">' + esc(bid.builder) + '</p></div><h1 class="bt-hero__project" data-large-title>' + esc(pj.name) + '</h1>' + (pj.place ? '<p class="bt-hero__place">' + esc(pj.place) + '</p>' : '')
+    + '<div class="bt-hero__row">' + pillFor(bid, today) + (bid.alternateGroup ? '<span class="sk-tag">Alternate</span>' : '') + '</div>'
+    + '<p class="bt-amount">' + (bid.amount != null ? money(bid.amount) : '<span class="sk-muted" style="font-size:22px">No amount yet</span>') + (bid.amount != null && bid.houses > 1 ? '<small>' + money(bid.amount / bid.houses) + ' per house</small>' : '') + '</p></div>'
+    + '<div class="sk-actions"><button class="sk-btn" type="button" data-sheet-open="note-sheet">' + ic("note") + 'Add note</button>'
+    + (bid.status === "New" ? '<button class="sk-btn sk-btn--secondary" type="button" id="start-drafting">' + ic("edit") + 'Start drafting</button>' : '') + '</div>'
+    + '<div class="sk-list">' + rows.map(([k, v, sub]) => '<div class="sk-row"><div class="sk-row__body"><div class="sk-row__title">' + k + '</div>' + (sub ? '<div class="sk-row__sub">' + sub + '</div>' : '') + '</div><span class="sk-row__value' + (k === "Houses" || k === "Living area" || k === "Under roof" ? ' sk-count' : '') + '">' + v + '</span></div>').join("")
+    + (bid.attachment ? '<a class="sk-row" href="' + esc(bid.attachment) + '" target="_blank" rel="noopener"><div class="sk-row__body"><div class="sk-row__title" style="color:var(--sk-tint)">Open estimate</div></div>' + ic("link", "sk-row__chev") + '</a>' : '')
+    + '</div>'
+    + (bid.files && bid.files.length ? '<div class="sk-section-title"><span>Files</span><span>' + bid.files.length + '</span></div><div class="sk-list">' + bid.files.map(x => '<div class="sk-row sk-row--icon"><span class="sk-row__icon">' + ic("doc") + '</span><div class="sk-row__body"><div class="sk-row__title">' + esc(x.name) + '</div></div></div>').join("") + '</div>' : '')
+    + '<div class="sk-section-title"><span>Notes</span><span>' + (notes.length || "") + '</span></div>'
+    + (notes.length ? '<div class="sk-list"><ul class="sk-timeline">' + notes.map(n => '<li' + (n.pending ? ' class="is-pending"' : '') + '><time>' + esc(new Date(n.at).toLocaleString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })) + ' ET</time><p>' + esc(n.text) + '</p></li>').join("") + '</ul></div>'
+      : '<div class="sk-list"><div class="sk-empty" style="padding:28px 20px"><p class="sk-empty__text">No notes yet.</p></div></div>')
+    + '<p class="sk-footer">' + FOOTER + '</p>');
+  /* Start drafting: a plain status change on the same record — the bid
+     leaves Boards intake and joins the Bids pipeline as Drafting. */
+  const sd = P.body.querySelector("#start-drafting");
+  if (sd) sd.onclick = async () => {
+    sd.disabled = true;
+    try {
+      await api("/api/bids/" + encodeURIComponent(bid.id), { method: "PUT", body: JSON.stringify({ status: "Drafting" }) });
+      toast("Moved to Drafting"); P.reload(); refreshRoots();
+    } catch (err) { sd.disabled = false; toast(err.message, { icon: "alert" }); }
+  };
+}
+
+/* optimistic: the note shows at once; if saving fails it is taken back out and the text returned */
+$("note-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const text = $("note-text").value.trim(); if (!text || !current) return;
+  const bid = current, P = detailPage, temp = { at: new Date().toISOString(), text, pending: true };
+  bid.notes = (bid.notes || []).concat(temp); $("note-text").value = ""; SK.closeSheet("note-sheet"); paintDetail(P, bid);
+  try { await api("/api/bids/" + encodeURIComponent(bid.id) + "/notes", { method: "POST", body: JSON.stringify({ text }) }); toast("Note saved"); P.reload(); refreshRoots(); }
+  catch (err) { bid.notes = bid.notes.filter((n) => n !== temp); paintDetail(P, bid); $("note-text").value = text; toast(err.message, { icon: "alert" }); }
+});
+
+/* ---------- Add / edit sheet ---------- */
+async function ensureBuilders() { if (builders.length) return; try { builders = (await api("/api/builders")).builders || []; } catch (e) { builders = []; } }
+const f = (id, label, control, cls) => '<label class="sk-field' + (cls ? " " + cls : "") + '" for="' + id + '"><span class="sk-field__label">' + label + '</span>' + control + '</label>';
+const inp = (id, v, attrs) => '<input class="sk-field__input" id="' + id + '" value="' + esc(v ?? "") + '" ' + (attrs || "") + '>';
+const sel = (id, opts, v) => '<select class="sk-field__input" id="' + id + '">' + opts.map(o => '<option' + (o === v ? ' selected' : '') + '>' + o + '</option>').join("") + '</select>';
+
+function formHtml(b, isNew) {
+  b = b || {};
+  return '<div class="sk-list">'
+    + f("builder", "Builder", inp("builder", b.builder, 'list="builder-list" required autocomplete="off" placeholder="Builder name"') + '<datalist id="builder-list">' + builders.map(x => '<option value="' + esc(x.name) + '"></option>').join("") + '</datalist>')
+    + f("project", "Project or house address", inp("project", b.project, 'required placeholder="Address or project"'))
+    + f("planName", "Plan name", inp("planName", b.planName, 'placeholder="Optional"'))
+    + '</div><div class="sk-space"></div><div class="sk-list">'
+    + f("status", "Stage", sel("status", STATUSES, b.status || "Drafting"), "sk-field--row")
+    + f("trade", "Trade", sel("trade", TRADES, b.trade || "Electrical"), "sk-field--row")
+    + f("amount", "Bid amount", inp("amount", b.amount, 'inputmode="decimal" placeholder="$0"'), "sk-field--row")
+    + f("houses", "Houses", inp("houses", isNew ? 1 : b.houses, 'type="number" min="1" step="1" inputmode="numeric"'), "sk-field--row")
+    + f("livingSf", "Living sq ft", inp("livingSf", b.livingSf, 'type="number" min="1" step="1" inputmode="numeric" placeholder="From the plans"'), "sk-field--row")
+    + f("underRoofSf", "Under roof sq ft", inp("underRoofSf", b.underRoofSf, 'type="number" min="1" step="1" inputmode="numeric" placeholder="From the plans"'), "sk-field--row")
+    + '</div><div class="sk-space"></div><div class="sk-list">'
+    + SK.dateField("bidDate", "Sent on", isNew ? todayET() : b.bidDate)
+    + SK.dateField("followUpDate", "Follow up on", b.followUpDate, { empty: "Add date" })
+    + '</div><div class="sk-space"></div><div class="sk-list">'
+    + f("attachment", "Estimate link", inp("attachment", b.attachment, 'type="url" inputmode="url" placeholder="Dropbox or Jobber link"'))
+    + f("lostReason", "Lost because", inp("lostReason", b.lostReason, 'placeholder="Needed when stage is Lost"'))
+    + f("alternateGroup", "Alternate group", inp("alternateGroup", b.alternateGroup, 'placeholder="Optional"'))
+    + (isNew ? f("notes", "First note", '<textarea class="sk-field__input" id="notes" rows="3" placeholder="What you sent, who you talked to"></textarea>') : '')
+    + '</div><p class="sk-field-hint">Bids with the same alternate group are either/or options. Totals count only the highest one.</p>'
+    + (isNew ? '' : '<div class="sk-actions"><button class="sk-btn sk-btn--danger" type="button" id="del">' + ic("trash") + 'Delete bid</button></div>');
+}
+function readForm() {
+  const v = (id) => $(id) ? $(id).value : undefined;
+  return { builder: v("builder"), project: v("project"), planName: v("planName"), alternateGroup: v("alternateGroup"), trade: v("trade"), status: v("status"),
+    bidDate: v("bidDate"), followUpDate: v("followUpDate"), amount: v("amount"), houses: v("houses"), livingSf: v("livingSf"), underRoofSf: v("underRoofSf"), attachment: v("attachment"), lostReason: v("lostReason"), notes: v("notes") };
+}
+let onSave = null;
+function wireLost() { const s = $("status"), l = $("lostReason"); const sync = () => { l.required = s.value === "Lost"; l.closest(".sk-field").classList.toggle("is-invalid", s.value === "Lost" && !l.value.trim()); }; s.onchange = sync; l.oninput = sync; sync(); }
+async function openNew() {
+  await ensureBuilders();
+  $("bid-sheet-title").textContent = "New bid"; $("form-save").textContent = "Save bid";
+  $("form-body").innerHTML = formHtml(null, true); SK.syncDates($("form-body")); wireLost();
+  onSave = async (body) => { const r = await api("/api/bids", { method: "POST", body: JSON.stringify(body) }); SK.closeSheet("bid-sheet"); toast("Bid saved"); refreshRoots(); location.hash = "#/bids/" + r.bid.id; };
+  SK.openSheet("bid-sheet");
+}
+async function openEdit() {
+  if (!current) return; await ensureBuilders();
+  $("bid-sheet-title").textContent = "Edit bid"; $("form-save").textContent = "Save changes";
+  $("form-body").innerHTML = formHtml(current, false); SK.syncDates($("form-body")); wireLost();
+  $("del").onclick = async () => { if (!confirm("Delete this bid? This can't be undone.")) return; try { await api("/api/bids/" + encodeURIComponent(current.id), { method: "DELETE" }); SK.closeSheet("bid-sheet"); toast("Bid deleted"); refreshRoots(); nav.back(); } catch (err) { toast(err.message, { icon: "alert" }); } };
+  onSave = async (body) => { delete body.notes; await api("/api/bids/" + encodeURIComponent(current.id), { method: "PUT", body: JSON.stringify(body) }); SK.closeSheet("bid-sheet"); toast("Saved"); detailPage.reload(); refreshRoots(); };
+  SK.openSheet("bid-sheet");
+}
+$("form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const body = readForm();
+  if (!String(body.builder || "").trim()) return toast("Add the builder", { icon: "alert" });
+  if (!String(body.project || "").trim()) return toast("Add the project or address", { icon: "alert" });
+  if (body.status === "Lost" && !String(body.lostReason || "").trim()) return toast("Add why it was lost", { icon: "alert" });
+  try { await onSave(body); } catch (err) { toast(err.message, { icon: "alert" }); }
+});
+$("bid-sheet").addEventListener("sk:close", () => { if (/^#\/bids\/new/.test(location.hash)) history.replaceState(null, "", (nav.top() && nav.top().hash) || "#/"); });
+
+/* ---------- Builders ---------- */
+function renderBuilders(P) {
+  header(P, { title: "Bid Tracker", action: addBtn });
+  P.html('<div class="sk-pagehead"><div><h1 class="sk-title">Builders</h1><p class="sk-note">&nbsp;</p></div></div>' + skel(4));
+  P.reload = () => BidsLocal.data("/api/stats", (s) => paintBuilders(P, s)).catch(loadErr(P));
+  P.refreshable(P.reload);
+  return P.reload();
+}
+function paintBuilders(P, s) {
+  P._painted = true;
+  const rows = s.builders || [];
+  P.html('<div class="sk-pagehead"><div><h1 class="sk-title">Builders</h1><p class="sk-note">' + plural(rows.length, "builder") + ', most bids first</p></div></div><div class="sk-space"></div>'
+    + (rows.length ? '<div class="sk-list">' + rows.map(r => '<a class="sk-row" href="#/bids?builder=' + encodeURIComponent(r.builder) + '">' + blogo(r.builder) + '<div class="sk-row__body"><div class="sk-row__title">' + esc(r.builder) + '</div><div class="sk-row__sub">' + plural(r.bids, "bid") + ' · ' + r.won + ' won · ' + r.lost + ' lost' + (r.lastBidDate ? ' · last ' + fmtDate(r.lastBidDate) : '') + '</div></div><span class="sk-row__value sk-num">' + (r.openAmount ? moneyShort(r.openAmount) : '') + '</span>' + ic("chevron-right", "sk-row__chev") + '</a>').join("") + '</div><p class="sk-field-hint">Amount on the right is what is still open with that builder.</p>'
+      : '<div class="sk-empty"><div class="sk-empty__icon">' + ic("building") + '</div><p class="sk-empty__title">No builders yet</p><p class="sk-empty__text">Builders appear here once you add bids.</p></div>')
+    + '<p class="sk-footer">' + FOOTER + '</p>');
+}
+
+/* ---------- More + import ---------- */
+function renderMore(P) {
+  header(P, { title: "Bid Tracker" });
+  P.html('<div class="sk-pagehead"><div><h1 class="sk-title">More</h1></div></div><div class="sk-space"></div>'
+    + '<div class="sk-list">'
+    + '<a class="sk-row sk-row--icon" href="#/import"><span class="sk-row__icon">' + ic("upload") + '</span><div class="sk-row__body"><div class="sk-row__title">Import bids</div></div>' + ic("chevron-right", "sk-row__chev") + '</a>'
+    + '<a class="sk-row sk-row--icon" href="#" data-export="1"><span class="sk-row__icon">' + ic("download") + '</span><div class="sk-row__body"><div class="sk-row__title">Export all bids</div><div class="sk-row__sub">Spreadsheet file (CSV)</div></div>' + ic("chevron-right", "sk-row__chev") + '</a>'
+    + '<a class="sk-row sk-row--icon" href="#" data-template="1"><span class="sk-row__icon">' + ic("doc") + '</span><div class="sk-row__body"><div class="sk-row__title">Blank import template</div></div>' + ic("chevron-right", "sk-row__chev") + '</a>'
+    + '</div><div class="sk-section-title"><span>Display</span></div><div class="sk-list" id="appearance"></div>'
+    + '<div class="sk-space"></div><div class="sk-list">'
+    + '<a class="sk-row sk-row--center" href="#" data-lock="1"><div class="sk-row__title" style="color:var(--sk-tint)">Lock app</div></a>'
+    + '</div><p class="sk-footer">This app never sends email, texts or calls.<br>' + FOOTER + '</p>');
+  SK.scheme.mountToggle(P.body.querySelector("#appearance"));
+}
+function renderImport(P, back) {
+  header(P, { back, title: "Import" });
+  P.html('<div class="sk-pagehead"><div><h1 class="sk-title">Import bids</h1><p class="sk-note">Bring in bids you already sent. Nothing is made up.</p></div></div><div class="sk-space"></div>'
+    + '<form id="imp"><div class="sk-list">'
+    + '<label class="sk-field" for="file"><span class="sk-field__label">Spreadsheet file (CSV)</span><input class="sk-field__input" id="file" type="file" accept=".csv,text/csv,text/plain"></label>'
+    + '<label class="sk-field" for="paste"><span class="sk-field__label">Or paste rows</span><textarea class="sk-field__input" id="paste" rows="5" placeholder="builder,project,trade,..."></textarea></label>'
+    + '</div><p class="sk-field-hint">Columns: builder, project, plan_name, trade, bid_date, amount, houses, status, follow_up_date, lost_reason, attachment, notes, alternate_group, living_sf, under_roof_sf. Dates as 2026-11-19.</p>'
+    + '<div class="sk-actions"><button class="sk-btn" type="submit">' + ic("upload") + 'Import</button><a class="sk-btn sk-btn--text" href="#" data-template="1" style="align-self:center">Download blank template</a></div>'
+    + '<p class="sk-note" id="imp-result" role="status"></p></form><p class="sk-footer">' + FOOTER + '</p>');
+  $("imp").onsubmit = async (e) => {
+    e.preventDefault(); const out = $("imp-result"); out.textContent = "Importing…";
+    try {
+      const file = $("file").files[0], pasted = $("paste").value.trim(); let data;
+      if (file) { const fd = new FormData(); fd.append("file", file); data = await api("/api/import", { method: "POST", body: fd }); }
+      else if (pasted) data = await api("/api/import", { method: "POST", headers: { "Content-Type": "text/csv" }, body: pasted });
+      else { out.textContent = "Choose a file or paste rows first."; return; }
+      const errs = (data.errors || []).map(er => "Line " + er.line + ": " + er.error).join(" · ");
+      out.textContent = "Imported " + plural(data.imported, "bid") + "." + (errs ? " Skipped: " + errs : "");
+      toast("Import finished"); refreshRoots();
+    } catch (err) { out.textContent = err.message; }
+  };
+}
+
+function start() {
+  nav = SK.stack("#app", { lead: LOGO, title: "Bid Tracker" });
+  window.addEventListener("hashchange", route);
+  route();
+  SK.registerSW("sharma-sw.js");
+}
+window.__startApp = start;
+BidsLocal.boot();
+</script>
+</body>
+</html>
