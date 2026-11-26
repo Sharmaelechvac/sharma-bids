@@ -142,7 +142,7 @@ html:not(.bt-locked) #bt-lock{display:none}
 <script>
 const STATUSES = ["New","Drafting","Sent","Follow-up","Won","Lost","No response"];
 const TRADES = ["Electrical","HVAC","Both","Low voltage"];
-const FOOTER = "Sharma Electric &amp; HVAC<br>Lic. EC13013924 · CAC1823596<br><span style=\"display:inline-block;background:#264387;border-radius:8px;padding:7px 14px;margin-top:8px\"><img src=\"assets/sharma360-logo-reversed.png\" alt=\"SHARMA360\" style=\"height:22px;width:auto;display:block\"></span>";
+const FOOTER = "Sharma Electric &amp; HVAC<br>Lic. EC13013924 · CAC1823596<br><span style=\"display:inline-flex;align-items:center;gap:8px;background:#264387;border-radius:8px;padding:7px 14px;margin-top:8px;color:#fff;font-size:11px;letter-spacing:.08em\">Powered by <img src=\"assets/sharma360-logo-reversed.png\" alt=\"SHARMA360\" style=\"height:22px;width:auto;display:block\"></span>";
 const PAGE = 25;
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
