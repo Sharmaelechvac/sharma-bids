@@ -329,19 +329,27 @@ function loadList() {
   return BidsLocal.data("/api/bids" + (p.toString() ? "?" + p : ""), (data) => { if (seq === listSeq) paintList(data); })
     .catch((e) => { if (seq !== listSeq) return; if (listPage && listPage._painted) toast(e.message, { icon: "alert" }); else $("list").innerHTML = errorView(e); });
 }
+/* Alternate-aware total, mirroring primaryForTotals in assets/pure.js:
+   bids sharing an alternate group count once, at the highest amount. */
+function totalAmount(list) {
+  const best = new Map();
+  for (const b of list) { const g = String(b.alternateGroup || "").trim(); if (!g) continue; const cur = best.get(g); if (!cur || (Number(b.amount) || 0) > (Number(cur.amount) || 0)) best.set(g, b); }
+  return list.reduce((a, b) => { const g = String(b.alternateGroup || "").trim(); return a + (!g || best.get(g) === b ? (Number(b.amount) || 0) : 0); }, 0);
+}
 function paintList(data) {
   if (listPage) listPage._painted = true;
   allBids = data.bids || [];
   const today = todayET();
-  const counts = { open: 0, due: 0, won: 0, lost: 0, new: 0, all: allBids.length };
-  allBids.forEach(b => { counts[segOf(b)]++; if (workState(b, today) === "Needs you") counts.due++; });
-  const segs = [["open","Open"],["due","Due"],["won","Won"],["lost","Lost"],["all","All"]];
+  const counts = { open: 0, due: 0, sent: 0, won: 0, lost: 0, new: 0, all: allBids.length };
+  allBids.forEach(b => { counts[segOf(b)]++; if (workState(b, today) === "Needs you") counts.due++; if (b.status === "Sent") counts.sent++; });
+  const segs = [["open","Open"],["due","Due"],["sent","Sent"],["won","Won"],["lost","Lost"],["all","All"]];
   $("seg").innerHTML = segs.map(([k, l]) => '<button type="button" role="tab" aria-selected="' + (state.seg === k) + '" data-seg="' + k + '">' + l + '</button>').join("");
   $("seg").querySelectorAll("button").forEach(btn => btn.onclick = () => { state.seg = btn.dataset.seg; state.shown = PAGE; loadList(); });
-  const list = allBids.filter(b => state.seg === "all" ? true : state.seg === "due" ? workState(b, today) === "Needs you" : segOf(b) === state.seg)
-    .sort(SORTERS[state.sort] || ((a, b) => state.seg === "due" ? (a.followUpDate || "").localeCompare(b.followUpDate || "") : 0));
+  const list = allBids.filter(b => state.seg === "all" ? true : state.seg === "due" ? workState(b, today) === "Needs you" : state.seg === "sent" ? b.status === "Sent" : segOf(b) === state.seg)
+    .sort(SORTERS[state.sort] || ((a, b) => state.seg === "due" ? (a.followUpDate || "").localeCompare(b.followUpDate || "") : state.seg === "sent" ? SORTERS["date-desc"](a, b) : 0));
   const filtered = !!(state.q || state.status || state.trade || state.builder || state.from || state.to);
-  $("list-sub").textContent = plural(list.length, "bid") + (state.builder ? " · " + state.builder : "") + (state.status ? " · " + state.status : "") + (filtered && !state.builder && !state.status ? " · filtered" : "") + (state.sort ? " · " + SORT_LABELS[state.sort] : "");
+  const sentTotal = state.seg === "sent" ? totalAmount(list) : 0;
+  $("list-sub").textContent = plural(list.length, "bid") + (sentTotal ? " · " + moneyShort(sentTotal) + " out" : "") + (state.builder ? " · " + state.builder : "") + (state.status ? " · " + state.status : "") + (filtered && !state.builder && !state.status ? " · filtered" : "") + (state.sort ? " · " + SORT_LABELS[state.sort] : "");
   if (!list.length) {
     $("list").innerHTML = '<div class="sk-empty"><div class="sk-empty__icon">' + ic(filtered ? "search" : "doc") + '</div><p class="sk-empty__title">' + (filtered ? "No bids match" : "No bids here yet") + '</p><p class="sk-empty__text">' + (filtered ? "Try a different word or clear the filters." : "Tap + to add a bid, or import the ones you already sent.") + '</p>' + (filtered ? '<button class="sk-btn sk-btn--secondary" type="button" onclick="clearFilters()">Clear filters</button>' : '') + '</div>';
     return;
@@ -608,6 +616,7 @@ function renderMore(P) {
   header(P, { title: "Bid Tracker" });
   P.html('<div class="sk-pagehead"><div><h1 class="sk-title">More</h1></div></div><div class="sk-space"></div>'
     + '<div class="sk-list">'
+    + '<a class="sk-row sk-row--icon" href="#/bids?seg=sent"><span class="sk-row__icon">' + ic("doc") + '</span><div class="sk-row__body"><div class="sk-row__title">Sent bids</div><div class="sk-row__sub">Every bid out the door, newest first</div></div>' + ic("chevron-right", "sk-row__chev") + '</a>'
     + '<a class="sk-row sk-row--icon" href="#/import"><span class="sk-row__icon">' + ic("upload") + '</span><div class="sk-row__body"><div class="sk-row__title">Import bids</div></div>' + ic("chevron-right", "sk-row__chev") + '</a>'
     + '<a class="sk-row sk-row--icon" href="#" data-export="1"><span class="sk-row__icon">' + ic("download") + '</span><div class="sk-row__body"><div class="sk-row__title">Export all bids</div><div class="sk-row__sub">Spreadsheet file (CSV)</div></div>' + ic("chevron-right", "sk-row__chev") + '</a>'
     + '<a class="sk-row sk-row--icon" href="#" data-template="1"><span class="sk-row__icon">' + ic("doc") + '</span><div class="sk-row__body"><div class="sk-row__title">Blank import template</div></div>' + ic("chevron-right", "sk-row__chev") + '</a>'
